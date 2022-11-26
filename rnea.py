@@ -155,10 +155,10 @@ class MultibodyDescription:
 
         m, r, w, h = self.m, self.r, self.w, self.h
         Glist = [
-            centroidal_inertia(
-                rotational_inertia([m * (3 * r ** 2 + l0 ** 2) / 12, m * (3 * r ** 2 + l0 ** 2) / 12, m * r ** 2 / 2]),
-                m
-            ),
+            # centroidal_inertia(
+            #     rotational_inertia([m * (3 * r ** 2 + l0 ** 2) / 12, m * (3 * r ** 2 + l0 ** 2) / 12, m * r ** 2 / 2]),
+            #     m
+            # ),
             centroidal_inertia(
                 rotational_inertia(
                     [m * (w ** 2 + l1 ** 2) / 12, m * (h ** 2 + l1 ** 2) / 12, m * (h ** 2 + w ** 2) / 12]),
@@ -256,6 +256,10 @@ def rnea(theta: np.ndarray, theta_dot: np.ndarray, theta_dot_dot: np.ndarray,
         A_ii.append(
             X_ipi @ A_ii[i-1] + model.S_ii[i] * theta_dot_dot[i] + Vx(V_ii[i]) @ model.S_ii[i] * theta_dot[i]
         )
+        # print(f'n_link {i}')
+        # print(model.I_ii[i] @ A_ii[i])
+        # print(Vx_star(V_ii[i]) @ (model.I_ii[i] @  V_ii[i]))
+        # print('++++++++++++++++++++++++++++++++++++++')
         F_ii[i] = model.I_ii[i] @ A_ii[i] + Vx_star(V_ii[i]) @ (model.I_ii[i] @  V_ii[i])
 
     tau = np.zeros([model.n_links, 1])
@@ -264,10 +268,10 @@ def rnea(theta: np.ndarray, theta_dot: np.ndarray, theta_dot_dot: np.ndarray,
         X_pii_star = Ad(MatrixExp6(se3(model.S_ii[i] * -theta[i])) @ Tinv(model.poses[i])).T
         F_ii[i-1] += X_pii_star @ F_ii[i]
 
-    return np.hstack(V_ii)
+    return np.hstack(F_ii)
 
 
-def InverseDynamics(thetalist, dthetalist, ddthetalist, g, Ftip, Mlist, Glist, Slist):
+def InverseDynamics(thetalist, dthetalist, ddthetalist, g, Ftip, Mlist, Glist, Slist, conversions, model):
     n = len(thetalist)
     Mi = np.eye(4)
     Ai = np.zeros((6, n))
@@ -291,7 +295,17 @@ def InverseDynamics(thetalist, dthetalist, ddthetalist, g, Ftip, Mlist, Glist, S
 
     F_ii = np.zeros((6, n))
     for i in range(n - 1, -1, -1):
-        print(np.dot(np.array(AdTi[i + 1]).T, Fi))
+        # I = I_from_rotational_inertia(
+        #     Glist[i+1][0:3, 0:3],
+        #     colvec([0, 0, 0.4 / 2]),
+        #     1
+        # )
+        # print(f'n_link {i+1}')
+        # print(np.dot(np.array(Glist[i]), Vdi[:, [i + 1]]))
+        # print(I @ (Ad(Tinv(conversions[2])) @ Vdi[:, [i + 1]]))
+        # print(np.dot(np.array(ad(Ad(Tinv(conversions[2])) @ Vi[:, [i + 1]])).T, \
+        #        np.dot(I, Ad(Tinv(conversions[2])) @ Vi[:, [i + 1]])))
+        # print('++++++++++++++++++++++++++++++++++++++')
         Fi = np.dot(np.array(AdTi[i + 1]).T, Fi) \
              + np.dot(np.array(Glist[i]), colvec(Vdi[:, i + 1])) \
              - np.dot(np.array(ad(Vi[:, i + 1])).T, \
@@ -299,7 +313,7 @@ def InverseDynamics(thetalist, dthetalist, ddthetalist, g, Ftip, Mlist, Glist, S
         F_ii[:6, i] = Fi[:, 0]
         taulist[i] = np.dot(np.array(Fi).T, Ai[:, i])
 
-    return Vi
+    return F_ii
 
 
 if __name__ == '__main__':
@@ -309,11 +323,11 @@ if __name__ == '__main__':
         [0, np.cos(0.2), -np.sin(0.2)],
         [0, np.sin(0.2), np.cos(0.2)]
     ])
-    print(desc.S_ii)
-    print(r)
-    print('=========================')
+    # print(desc.S_ii)
+    # print(r)
+    # print('=========================')
     # print(desc.Ts[1](0.2))
-    print('=========================')
+    # print('=========================')
     # print(Ad(desc.Ts[1](0.2)))
 
     thetalist = np.array([0.1, 0.1])
@@ -325,14 +339,50 @@ if __name__ == '__main__':
     g = np.array([0, 0, -9.8])
 
     print('=========================')
-    REsi = InverseDynamics(thetalist, dthetalist, ddthetalist, g, Ftip, Mlist, Glist, Slist)
-    for i in range(0, desc.n_links-1):
-        REsi[:, i] = Ad(Tinv(conversions[i])) @ REsi[:, i]
-        # REsi[:, [i]] = Ad(conversions[i+1]).T @ REsi[:, [i]]
-    print(REsi)
+    Fi_ = rnea(np.concatenate(([0], thetalist)), np.concatenate(([0], dthetalist)),
+               np.concatenate(([0], ddthetalist)), desc)
+    print(Fi_)
+
 
     print('=========================')
-    Fi_ = rnea(np.concatenate(([0], thetalist)), np.concatenate(([0], dthetalist)),
-         np.concatenate(([0], ddthetalist)), desc)
-    print(Fi_)
+    REsi = InverseDynamics(thetalist, dthetalist, ddthetalist, g, Ftip, Mlist, Glist, Slist, conversions, desc)
+    for i in range(desc.n_links-1):
+        # REsi[:, i] = Ad(Tinv(conversions[i])) @ REsi[:, i]
+        REsi[:, [i]] = Ad(conversions[i+1]).T @ REsi[:, [i]]
+    print(REsi)
+
+    # thetalist = np.array([0.1, 0.1, 0.1])
+    # dthetalist = np.array([0.1, 0.2, 0.3])
+    # ddthetalist = np.array([2, 1.5, 1])
+    # g = np.array([0, 0, -9.8])
+    # Ftip = np.array([1, 1, 1, 1, 1, 1])
+    # M01 = np.array([[1, 0, 0, 0],
+    #                 [0, 1, 0, 0],
+    #                 [0, 0, 1, 0.089159],
+    #                 [0, 0, 0, 1]])
+    # M12 = np.array([[0, 0, 1, 0.28],
+    #                 [0, 1, 0, 0.13585],
+    #                 [-1, 0, 0, 0],
+    #                 [0, 0, 0, 1]])
+    # M23 = np.array([[1, 0, 0, 0],
+    #                 [0, 1, 0, -0.1197],
+    #                 [0, 0, 1, 0.395],
+    #                 [0, 0, 0, 1]])
+    # M34 = np.array([[1, 0, 0, 0],
+    #                 [0, 1, 0, 0],
+    #                 [0, 0, 1, 0.14225],
+    #                 [0, 0, 0, 1]])
+    # G1 = np.diag([0.010267, 0.010267, 0.00666, 3.7, 3.7, 3.7])
+    # G2 = np.diag([0.22689, 0.22689, 0.0151074, 8.393, 8.393, 8.393])
+    # G3 = np.diag([0.0494433, 0.0494433, 0.004095, 2.275, 2.275, 2.275])
+    # Glist = np.array([G1, G2, G3])
+    # Mlist = np.array([M01, M12, M23, M34])
+    # Slist = np.array([[1, 0, 1, 0, 1, 0],
+    #                   [0, 1, 0, -0.089, 0, 0],
+    #                   [0, 1, 0, -0.089, 0, 0.425]]).T
+    #
+    # InverseDynamics(thetalist, dthetalist, ddthetalist, g, Ftip, Mlist, Glist, Slist, None, None)
+
+
+
 
