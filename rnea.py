@@ -87,9 +87,10 @@ class MultibodyDescription:
         self.l0 = l0
         self.l1 = l1
         self.l2 = l2
-        self.poses = [T(R=np.eye(3), p=np.zeros((3, 1))),
-                      T(R=np.eye(3), p=colvec([0, 0, l0])),
-                      T(R=np.eye(3), p=colvec([0, 0, l1]))]
+        self.poses = [
+            T(R=np.eye(3), p=np.zeros((3, 1))),
+            T(R=np.eye(3), p=colvec([0, 0, l0])),
+            T(R=np.eye(3), p=colvec([0, 0, l1]))]
         self.Ts = [
             link_pose(
                 T0=T(R=np.eye(3), p=np.zeros((3, 1))),
@@ -204,7 +205,7 @@ def Tinv(T: np.ndarray) -> np.ndarray:
     Rt = R.T
 
     return np.block([
-        [R.T, -Rt @ p],
+        [Rt, -Rt @ p],
         [np.zeros((1, 3)), 1]
     ])
 
@@ -245,30 +246,30 @@ def Xinv(X: np.ndarray) -> np.ndarray:
 def rnea(theta: np.ndarray, theta_dot: np.ndarray, theta_dot_dot: np.ndarray,
          model: MultibodyDescription) -> np.ndarray:
     V_ii = [np.zeros((6, 1))]
-    A_ii = [-colvec([0, 0, 0, 0, 0, -9.8])]  # error fixed
+    A_ii = [-colvec([0, 0, 0, 0, 0, -9.81])]  # error fixed
     F_ii = [np.empty((6, 1)) for _ in range(model.n_links)]
 
     for i in range(1, model.n_links):
+        print('==================================================')
         X_ipi = Ad(MatrixExp6(se3(model.S_ii[i] * -theta[i])) @ Tinv(model.poses[i]))
         V_ii.append(
             X_ipi @ V_ii[i-1] + model.S_ii[i] * theta_dot[i]
         )
         A_ii.append(
-            X_ipi @ A_ii[i-1] + model.S_ii[i] * theta_dot_dot[i] + Vx(V_ii[i]) @ model.S_ii[i] * theta_dot[i]
+            X_ipi @ A_ii[i-1] + model.S_ii[i] * theta_dot_dot[i] + Vx(V_ii[i]) @ (model.S_ii[i] * theta_dot[i])
         )
-        # print(f'n_link {i}')
-        # print(model.I_ii[i] @ A_ii[i])
-        # print(Vx_star(V_ii[i]) @ (model.I_ii[i] @  V_ii[i]))
-        # print('++++++++++++++++++++++++++++++++++++++')
         F_ii[i] = model.I_ii[i] @ A_ii[i] + Vx_star(V_ii[i]) @ (model.I_ii[i] @  V_ii[i])
 
-    tau = np.zeros([model.n_links, 1])
+    tau = np.zeros([model.n_joints, 1])
     for i in range(model.n_links - 1, 0, -1):
-        tau[i, 0] = model.S_ii[i].T @ F_ii[i]
+        # print(model.S_ii[i].T @ F_ii[i])
+        tau[i-1, 0] = model.S_ii[i].T @ F_ii[i]
+        # Check why is X_pii_star computed this way
         X_pii_star = Ad(MatrixExp6(se3(model.S_ii[i] * -theta[i])) @ Tinv(model.poses[i])).T
         F_ii[i-1] += X_pii_star @ F_ii[i]
+        # print(X_pii_star @ F_ii[i])
 
-    return np.hstack(F_ii)
+    return tau
 
 
 def InverseDynamics(thetalist, dthetalist, ddthetalist, g, Ftip, Mlist, Glist, Slist, conversions, model):
@@ -284,14 +285,22 @@ def InverseDynamics(thetalist, dthetalist, ddthetalist, g, Ftip, Mlist, Glist, S
     taulist = np.zeros(n)
     for i in range(n):
         Mi = np.dot(Mi, Mlist[i])
+        # print(Mi)
         Ai[:, i] = np.dot(Adjoint(TransInv(Mi)), np.array(Slist)[:, i])
+        # print(Ai[:, i])
         AdTi[i] = Adjoint(np.dot(MatrixExp6(VecTose3(Ai[:, i] * \
                                                      -thetalist[i])), \
                                  TransInv(Mlist[i])))
+        # print(AdTi[i])
         Vi[:, i + 1] = np.dot(AdTi[i], Vi[:, i]) + Ai[:, i] * dthetalist[i]
+        # print(Vi[:, i + 1])
+        # print("=============================")
+        # print(Vdi[:, i])
+        # print("=============================")
         Vdi[:, i + 1] = np.dot(AdTi[i], Vdi[:, i]) \
                         + Ai[:, i] * ddthetalist[i] \
                         + np.dot(ad(Vi[:, i + 1]), Ai[:, i]) * dthetalist[i]
+        # print(Vdi[:, i + 1])
 
     F_ii = np.zeros((6, n))
     for i in range(n - 1, -1, -1):
@@ -313,7 +322,7 @@ def InverseDynamics(thetalist, dthetalist, ddthetalist, g, Ftip, Mlist, Glist, S
         F_ii[:6, i] = Fi[:, 0]
         taulist[i] = np.dot(np.array(Fi).T, Ai[:, i])
 
-    return F_ii
+    return taulist, F_ii, Ai
 
 
 if __name__ == '__main__':
@@ -336,7 +345,7 @@ if __name__ == '__main__':
 
     Mlist, Slist, conversions, Glist = desc.to_modern_robotics_description()
     Ftip = np.zeros((6, 1))
-    g = np.array([0, 0, -9.8])
+    g = np.array([0, 0, -9.81])
 
     print('=========================')
     Fi_ = rnea(np.concatenate(([0], thetalist)), np.concatenate(([0], dthetalist)),
@@ -345,11 +354,11 @@ if __name__ == '__main__':
 
 
     print('=========================')
-    REsi = InverseDynamics(thetalist, dthetalist, ddthetalist, g, Ftip, Mlist, Glist, Slist, conversions, desc)
-    for i in range(desc.n_links-1):
-        # REsi[:, i] = Ad(Tinv(conversions[i])) @ REsi[:, i]
-        REsi[:, [i]] = Ad(conversions[i+1]).T @ REsi[:, [i]]
-    print(REsi)
+    tau, Fi, Ai = InverseDynamics(thetalist, dthetalist, ddthetalist, g, Ftip, Mlist, Glist, Slist, conversions, desc)
+    for i in range(0, desc.n_links-1):
+        Ai[:, [i]] = Ad(Tinv(conversions[i])) @ Ai[:, [i]]
+        Fi[:, [i]] = Ad(conversions[i+1]).T @ Fi[:, [i]]
+    print(tau)
 
     # thetalist = np.array([0.1, 0.1, 0.1])
     # dthetalist = np.array([0.1, 0.2, 0.3])

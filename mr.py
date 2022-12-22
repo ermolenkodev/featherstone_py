@@ -852,14 +852,23 @@ def InverseDynamics(thetalist, dthetalist, ddthetalist, g, Ftip, Mlist, \
     taulist = np.zeros(n)
     for i in range(n):
         Mi = np.dot(Mi,Mlist[i])
+        # print(Mi)
         Ai[:, i] = np.dot(Adjoint(TransInv(Mi)), np.array(Slist)[:, i])
+        # print(Ai[:, i])
         AdTi[i] = Adjoint(np.dot(MatrixExp6(VecTose3(Ai[:, i] * \
                                             -thetalist[i])), \
                                  TransInv(Mlist[i])))
+        # print(AdTi[i])
         Vi[:, i + 1] = np.dot(AdTi[i], Vi[:,i]) + Ai[:, i] * dthetalist[i]
+        # print(Vi[:, i + 1])
+        # print("=============================")
+        # print(Vdi[:, i])
+        # print("=============================")
         Vdi[:, i + 1] = np.dot(AdTi[i], Vdi[:, i]) \
                        + Ai[:, i] * ddthetalist[i] \
                        + np.dot(ad(Vi[:, i + 1]), Ai[:, i]) * dthetalist[i]
+        # print(Vdi[:, i + 1])
+
     for i in range (n - 1, -1, -1):
         Fi = np.dot(np.array(AdTi[i + 1]).T, Fi) \
              + np.dot(np.array(Glist[i]), Vdi[:, i + 1]) \
