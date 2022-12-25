@@ -188,4 +188,3 @@ def Xinv(X: np.ndarray) -> np.ndarray:
         [R.T, np.zeros((3, 3))],
         [-R.T@so3(p), R.T]
     ])
-
