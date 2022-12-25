@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from rnea import colvec, T, I_from_rotational_inertia, rotational_inertia, centroidal_inertia, Ad
+from spatial import colvec, T, I_from_rotational_inertia, rotational_inertia, centroidal_inertia, Ad
 from spatial import rotx, roty, rotz
 
 
@@ -54,7 +54,9 @@ class MultibodyModel:
         # it's equal to the number of joints
         self.n_bodies = 2
 
-        self.parent = [0, 1]
+        # parent[i] is the index of the parent of the i-th body
+        # base is excluded from the list and the direct children of the base are having parent index -1
+        self.parent = [-1, 0]
         self.joints = [RevoluteJoint(JointAxis.X), RevoluteJoint(JointAxis.X)]
 
         l0, l1, l2 = 0.5, 0.7, 0.4
@@ -99,7 +101,6 @@ class MultibodyModel:
         ])
 
         frames_conversions = [
-            T(R=np.eye(3), p=colvec([0, 0, -l0/2])),
             T(R=np.eye(3), p=colvec([0, 0, -l1/2])),
             T(R=np.eye(3), p=colvec([0, 0, -l2/2]))
         ]

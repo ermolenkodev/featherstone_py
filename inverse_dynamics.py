@@ -1,59 +1,60 @@
-from typing import Optional, List
+from typing import Optional, Dict, List
 
 import numpy as np
 from model import MultibodyModel
-from rnea import Vx, Vx_star
+from spatial import Vx, Vx_star
 
 
-# TODO apply_external_forces
 def rnea(model: MultibodyModel, q: np.ndarray, qd: np.ndarray, qdd: np.ndarray) -> np.ndarray:
-    n_bodies, parent, joints, X_tree, I, gravity = model.as_tuple()
+    return RNEAImpl().run(model, q, qd, qdd)
 
-    V = np.zeros((6, n_bodies+1))
-    spatial_gravity = np.block([
-        [np.zeros((3, 1))],
-        [gravity]
-    ])
-    A = np.block([[-spatial_gravity, np.zeros((6, n_bodies))]])
-    F = np.zeros((6, n_bodies+1))
-    Xup: List[Optional[np.ndarray]] = [None] * (n_bodies+1)
-    S = np.zeros((6, n_bodies+1))
 
-    # joints, q, qd, qdd, I, X_tree are numbered from 0 to n_bodies-1
-    # while Xup, S, V, A, F are numbered from 0 to n_bodies
-    # TODO this is a bit confusing, maybe it's better to have consistent numbering
-    for i in range(1, n_bodies+1):
-        print("=======================================")
-        # X_ipi = Ad(MatrixExp6(se3(model.S_ii[i] * -theta[i])) @ Tinv(model.poses[i]))
-        Xj, S[:, [i]] = joints[i-1].joint_transform(q[i-1]), joints[i-1].screw_axis()
-        Xup[i] = Xj @ X_tree[i-1]
+# Implementation of Recursive Newton-Euler Algorithm
+# TODO apply_external_forces
+class RNEAImpl:
+    def __init__(self):
+        self.executed = False
+        self.V: Optional[Dict[int, np.ndarray]]
+        self.A: Optional[Dict[int, np.ndarray]]
+        self.F: Optional[List[np.ndarray]]
+        self.Xup: Optional[List[np.ndarray]]
+        self.S: Optional[List[np.ndarray]]
 
-        # V_ii.append(
-        #     X_ipi @ V_ii[i-1] + model.S_ii[i] * theta_dot[i]
-        # )
-        Vj = S[:, [i]] * qd[i-1]
-        V[:, [i]] = Xup[i] @ V[:, [parent[i-1]]] + Vj
+    def run(self, model: MultibodyModel, q: np.ndarray, qd: np.ndarray, qdd: np.ndarray) -> np.ndarray:
+        n_bodies, parent, joints, X_tree, I, gravity = model.as_tuple()
 
-        # A_ii.append(
-        #     X_ipi @ A_ii[i-1] + model.S_ii[i] * theta_dot_dot[i] + Vx(V_ii[i]) @ model.S_ii[i] * theta_dot[i]
-        # )
-        A[:, [i]] = Xup[i] @ A[:, [parent[i-1]]] + S[:, [i]] * qdd[i-1] + Vx(V[:, [i]]) @ Vj
+        # velocity of the base is zero
+        V = {-1: np.zeros((6, 1))}
 
-        # print(Xup[i])
-        # print(A[:, [parent[i-1]]])
-        # print(S[:, [i]])
-        # print(qdd[i-1])
-        # print(Vx(V[:, [i]]))
-        # print(Vj)
-        # F_ii[i] = model.I_ii[i] @ A_ii[i] + Vx_star(V_ii[i]) @ (model.I_ii[i] @  V_ii[i])
-        F[:, [i]] = I[i-1] @ A[:, [i]] + Vx_star(V[:, [i]]) @ I[i-1] @ V[:, [i]]
-        # print(F[:, [i]])
+        # Note: we are assign acceleration of the base to the -gravity,
+        # but it is just a way to incorporate gravity term to the recursive force propagation formula
+        spatial_gravity = np.block([
+            [np.zeros((3, 1))],
+            [gravity]
+        ])
+        A = {-1: -spatial_gravity}
 
-    tau = np.zeros([n_bodies, 1])
-    for i in range(n_bodies, 0, -1):
-        tau[i-1, 0] = S[:, [i]].T @ F[:, [i]]
-        #     X_pii_star = Ad(MatrixExp6(se3(model.S_ii[i] * -theta[i])) @ Tinv(model.poses[i])).T
-        #     F_ii[i-1] += X_pii_star @ F_ii[i]
-        F[:, [parent[i-1]]] += Xup[i].T  @ F[:, [i]]
+        F = {-1: np.zeros((6, 1))}
+        Xup = [np.empty((6, 6))] * n_bodies
+        S = [np.zeros((6, 1))] * n_bodies
 
-    return tau
+        # All indexed from 0
+        for i in range(n_bodies):
+            Xj, S[i] = joints[i].joint_transform(q[i]), joints[i].screw_axis()
+            Xup[i] = Xj @ X_tree[i]
+            Vj = S[i] * qd[i]
+
+            V[i] = Xup[i] @ V[parent[i]] + Vj
+            A[i] = Xup[i] @ A[parent[i]] + S[i] * qdd[i] + Vx(V[i]) @ Vj
+
+            F[i] = I[i] @ A[i] + Vx_star(V[i]) @ I[i] @ V[i]
+
+        tau = np.zeros([n_bodies, 1])
+        for i in range(n_bodies-1, -1, -1):
+            tau[i, 0] = S[i].T @ F[i]
+            F[parent[i]] += Xup[i].T  @ F[i]
+
+        self.V, self.A, self.F, self.Xup, self.S = V, A, F, Xup, S
+        self.executed = True
+
+        return tau
