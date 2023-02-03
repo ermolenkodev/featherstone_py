@@ -1,12 +1,13 @@
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union
 
 import numpy as np
-from model import MultibodyModel
-from spatial import Vx, Vx_star
+from featherstone_py.model import MultibodyModel
+from featherstone_py.spatial import Vx, Vx_star, colvec
 
 
-def rnea(model: MultibodyModel, q: np.ndarray, qd: np.ndarray, qdd: np.ndarray) -> np.ndarray:
-    return RNEAImpl().run(model, q, qd, qdd)
+def rnea(model: MultibodyModel, q: np.ndarray, qd: np.ndarray, qdd: np.ndarray,
+         gravity: Union[np.ndarray, List[float]] = np.array([0, 0, -9.81]), f_ext=None) -> np.ndarray:
+    return RNEAImpl().run(model, q, qd, qdd, gravity)
 
 
 # Implementation of Recursive Newton-Euler Algorithm
@@ -20,8 +21,8 @@ class RNEAImpl:
         self.Xup: Optional[List[np.ndarray]]
         self.S: Optional[List[np.ndarray]]
 
-    def run(self, model: MultibodyModel, q: np.ndarray, qd: np.ndarray, qdd: np.ndarray) -> np.ndarray:
-        n_bodies, parent, joints, X_tree, I, gravity = model.as_tuple()
+    def run(self, model: MultibodyModel, q: np.ndarray, qd: np.ndarray, qdd: np.ndarray, gravity: np.ndarray) -> np.ndarray:
+        n_bodies, joints, parent, X_tree, I = model
 
         # velocity of the base is zero
         V = {-1: np.zeros((6, 1))}
@@ -30,7 +31,7 @@ class RNEAImpl:
         # but it is just a way to incorporate gravity term to the recursive force propagation formula
         spatial_gravity = np.block([
             [np.zeros((3, 1))],
-            [gravity]
+            [colvec(gravity)]
         ])
         A = {-1: -spatial_gravity}
 

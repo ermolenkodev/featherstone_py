@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 import numpy as np
 
@@ -103,9 +103,12 @@ def Rot(omega: np.ndarray, theta: float) -> np.ndarray:
     return np.eye(3) + np.sin(theta) * omega_so3 + (1 - np.cos(theta)) * omega_so3 @ omega_so3
 
 
-def colvec(coefficients: List[float]) -> np.ndarray:
-    assert len(coefficients) == 3 or len(coefficients) == 6
-    return np.array(coefficients).reshape(3, 1) if len(coefficients) == 3 else np.array(coefficients).reshape(6, 1)
+def colvec(coefficients: Union[List[float], np.ndarray]) -> np.ndarray:
+    if isinstance(coefficients, list):
+        return np.array(coefficients).reshape(len(coefficients), 1)
+    elif isinstance(coefficients, np.ndarray):
+        # TODO check if shape is already (n, 1)
+        return coefficients.reshape(len(coefficients), 1)
 
 
 def rotational_inertia(v: List[float]) -> np.ndarray:

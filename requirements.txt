@@ -1,1 +1,3 @@
-modern_robotics
+numpy
+
+# TODO specify the versions of the package

@@ -1,4 +1,4 @@
-from spatial import rotx, roty, rotz, colvec
+from featherstone_py.spatial import rotx, roty, rotz, colvec
 from enum import Enum
 from abc import ABC, abstractmethod
 
