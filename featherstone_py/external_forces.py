@@ -13,6 +13,22 @@ from utils import take_last
 def apply_external_forces(f_ext: Optional[Dict[int, np.ndarray]],
                           model: MultibodyModel, F: Dict[int, np.ndarray],
                           Xup: np.ndarray) -> Dict[int, np.ndarray]:
+    """
+    Incorporates the external forces specified in f_ext into the calculations of a dynamics algorithm.
+    f_ext is a dictionary of spatial forces, indexed by body id.
+    If specified f_ext[i] is the spatial force exerted on body i by the environment expressed in the base frame.
+    if f_ext[i] is not specified, it is not included in the calculations.
+    For each body algorithm is basically computes
+    F_out[i] = F[i] - transformed f_ext[i], where F_out and F are dicts of
+    forces expressed in link coordinates; so f_ext has to be transformed to
+    link coordinates before use.  The model and 
+    :param f_ext: dictionary of spatial forces exerted on bodies by the environment
+    :param model: multibody description of the system
+    :param F: dictionary of spatial forces to be updated with the external forces
+    :param Xup: contain the spatial transformations from i-th body frame to i+1-th body frame. Should be precomputed.\f
+    See inverse_dynamics.py for example.
+    :return: dictionary of spatial forces updated with the external forces
+    """  # noqa: D301
     if f_ext is None or not f_ext:
         return F
 
@@ -22,7 +38,14 @@ def apply_external_forces(f_ext: Optional[Dict[int, np.ndarray]],
     for i in range(model.n_bodies):
         Xi_0[i] = Xup[i] @ Xi_0[model.parent[i]]
         if i in f_ext:
-            # F_out[i] -= np.linalg.inv(Xi_0[i].T) @ colvec(f_ext[i])
+            # This part is quite tricky
+            # Xi_0[i] is the spatial transform from the base frame to the i-th body frame
+            # Xi_0[i].T is the wrench transform from the i-th body frame to the base frame
+            # f_ext[i] is expressed in the base frame, and we want to transform it to the i-th body frame
+            # so we need to apply the inverse of the Xi_0[i].T to the f_ext[i]
+            # it can be done as np.linalg.inv(Xi_0[i].T) @ colvec(f_ext[i])
+            # but it's more efficient to use np.linalg.solve cause we don't need the actual inverse matrix here
+            # this trick is used in the original code of Featherstone's spatialv2 library
             F_out[i] -= np.linalg.solve(Xi_0[i].T,  colvec(f_ext[i]))
 
     return F_out
@@ -31,6 +54,16 @@ def apply_external_forces(f_ext: Optional[Dict[int, np.ndarray]],
 def apply_end_effector_exerted_force(f_tip: Optional[np.ndarray],
                                      model: MultibodyModel,
                                      F: Dict[int, np.ndarray]) -> Dict[int, np.ndarray]:
+    """
+    This API is not used in the original Featherstone's code, but it is used in Modern Robotics library
+    and seems to be useful.
+    Incorporates the end-effector exerted force specified in f_tip into the calculations of a dynamics.
+    :param f_tip: spatial force exerted by the end-effector on the environment expressed in the end-effector frame.
+    :param model: multibody description of the system. Note that you should specify the T_n_ee transform in the model\f
+        which is the homogenous transformation matrix from the last body frame to the end-effector frame.
+    :param F: dictionary of spatial forces to be updated
+    :return: dictionary of spatial forces updated with the end-effector exerted force
+    """
     if f_tip is None:
         return F
 
@@ -39,6 +72,7 @@ def apply_end_effector_exerted_force(f_tip: Optional[np.ndarray],
 
     F_out = F.copy()
     end_effector_force = take_last(F_out)
-    end_effector_force += Ad(Tinv(model.T_n_ee)).T @ colvec(f_tip)
+    X_ee_n = Ad(Tinv(model.T_n_ee))
+    end_effector_force += X_ee_n.T @ colvec(f_tip)
 
     return F_out
