@@ -31,7 +31,7 @@ def test_torques_calculation(double_pendulum_models, q, qd, qdd, g, f_tip):
      [([0, 0], [0., 0], [0, 0.], [0, 0, -9.81], np.array([1, 2, 3, 4, 5, 6])),
       ([0, 0], [0., 0], [0, 0.], [0, 0, -9.81], np.array([1, 1, 1, 1, 1, 1]))]
 )
-def test_torques_calculation_with_eternal_forces(double_pendulum_models, q, qd, qdd, g, f_tip):
+def test_torques_calculation_with_external_forces(double_pendulum_models, q, qd, qdd, g, f_tip):
     q, qd, qdd, g = np.array(q), np.array(qd), np.array(qdd), np.array(g)
 
     m_feath_notation, m_mr_notation = double_pendulum_models

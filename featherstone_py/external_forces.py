@@ -6,7 +6,7 @@ from model import MultibodyModel
 
 from functools import singledispatch
 
-from spatial import Xinv, colvec, Tinv, Ad, T
+from spatial import colvec, Tinv, Ad, T
 from utils import take_last
 
 
