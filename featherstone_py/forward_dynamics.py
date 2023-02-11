@@ -57,9 +57,9 @@ def calculate_bias_forces(model: MultibodyModel, q: np.ndarray, qd: np.ndarray,
                           gravity: Union[np.ndarray, List[float]] = np.array([0, 0, -9.81]),
                           f_ext: Optional[np.ndarray] = None) -> np.ndarray:
     """
-    Calculate the bias forces vector using the recursive Newton-Euler algorithm.
+    Calculate the bias forces vector using the recursive Newton-Euler algorithm.\f
     Conceptually this method is equivalent to substituting of zero joint accelerations
-    into the manipulator equation of motion.
+    into the manipulator equation of motion.\f
     tau = M(q) * [0,0,...,0] + C(q, qd)
 
     :param model: Multibody system model in Featherstone's notation.
@@ -76,11 +76,11 @@ def calculate_bias_forces(model: MultibodyModel, q: np.ndarray, qd: np.ndarray,
 
 def calculate_mass_matrix_using_rnea(model: MultibodyModel, q: np.ndarray) -> np.ndarray:
     """
-    Calculate the mass matrix using the recursive Newton-Euler algorithm.
+    Calculate the mass matrix using the recursive Newton-Euler algorithm.\f
     Zeroing joint velocities, gravity and external forces we are effectively zeroing the bias forces vector
-    in the manipulator equation of motion.
+    in the manipulator equation of motion.\f
     On each iteration we calculate specific column of the mass matrix using the synthetic
-    joint accelerations vector with the only one non-zero element.
+    joint accelerations vector with the only one non-zero element.\f
     tau = M(q) * [0,0,..,1,..,0] - tau is effectively the column of the mass matrix.
     :param model: Multibody system model in Featherstone's notation.
     :param q: Joint positions vector.

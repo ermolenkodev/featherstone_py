@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 
 from example_models import DoublePendulum
-from featherstone_py.inverse_dynamics import rnea, RNEAImpl
+from featherstone_py.inverse_dynamics import rnea, rnea_impl
 from modern_robotics import InverseDynamics, Adjoint, TransInv, MatrixExp6, VecTose3, ad
 from featherstone_py.spatial import Ad, colvec, T, Tinv
 
@@ -63,10 +63,7 @@ def test_wrenches_calculation(double_pendulum_models, q, qd, qdd, g, Ftip):
 
     F_mr = wrenches_in_modern_robotics_notation(q, qd, qdd, g, Ftip, Mlist, Glist, Slist)
 
-    algorithm = RNEAImpl()
-    algorithm.run(m_feath_notation, q, qd, qdd, g, f_tip=Ftip)
-
-    F = algorithm.F
+    F = rnea_impl(m_feath_notation, q, qd, qdd, g, f_tip=Ftip).F
 
     for i in range(len(F_mr)):
         np.testing.assert_allclose(Ad(frames_conversions[i]).T @ F_mr[i], F[i][:, 0])
