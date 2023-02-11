@@ -1,7 +1,7 @@
 import numpy as np
 
 from featherstone_py.joint import JointMetadata, RevoluteJoint, JointAxis
-from typing import NamedTuple, List
+from typing import NamedTuple, List, Optional
 
 
 # TODO make a proper docstring
@@ -21,3 +21,5 @@ class MultibodyModel(NamedTuple):
 
     # spatial inertia of body i, expressed in body i coordinates.
     I: List[np.ndarray]
+
+    T_n_ee: Optional[np.ndarray] = None

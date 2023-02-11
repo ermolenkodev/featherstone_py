@@ -1,13 +1,17 @@
 from typing import Optional, Dict, List, Union
 
 import numpy as np
+
+from external_forces import apply_external_forces, apply_end_effector_exerted_force
 from featherstone_py.model import MultibodyModel
 from featherstone_py.spatial import Vx, Vx_star, colvec
 
 
 def rnea(model: MultibodyModel, q: np.ndarray, qd: np.ndarray, qdd: np.ndarray,
-         gravity: Union[np.ndarray, List[float]] = np.array([0, 0, -9.81]), f_ext=None) -> np.ndarray:
-    return RNEAImpl().run(model, q, qd, qdd, gravity)
+         gravity: Union[np.ndarray, List[float]] = np.array([0, 0, -9.81]),
+         f_tip: Optional[np.ndarray] = None,
+         f_ext: Optional[Dict[int, np.ndarray]] = None) -> np.ndarray:
+    return RNEAImpl().run(model, q, qd, qdd, gravity, f_tip, f_ext)
 
 
 # Implementation of Recursive Newton-Euler Algorithm
@@ -21,8 +25,10 @@ class RNEAImpl:
         self.Xup: Optional[List[np.ndarray]]
         self.S: Optional[List[np.ndarray]]
 
-    def run(self, model: MultibodyModel, q: np.ndarray, qd: np.ndarray, qdd: np.ndarray, gravity: np.ndarray) -> np.ndarray:
-        n_bodies, joints, parent, X_tree, I = model
+    def run(self, model: MultibodyModel, q: np.ndarray, qd: np.ndarray, qdd: np.ndarray, gravity: np.ndarray,
+            f_tip: Optional[np.ndarray] = None,
+            f_ext: Optional[Dict[int, np.ndarray]] = None) -> np.ndarray:
+        n_bodies, joints, parent, X_tree, I, _ = model
 
         # velocity of the base is zero
         V = {-1: np.zeros((6, 1))}
@@ -49,6 +55,9 @@ class RNEAImpl:
             A[i] = Xup[i] @ A[parent[i]] + S[i] * qdd[i] + Vx(V[i]) @ Vj
 
             F[i] = I[i] @ A[i] + Vx_star(V[i]) @ I[i] @ V[i]
+
+        F = apply_end_effector_exerted_force(f_tip, model, F)
+        F = apply_external_forces(f_ext, model, F, Xup)
 
         tau = np.zeros([n_bodies, 1])
         for i in range(n_bodies-1, -1, -1):

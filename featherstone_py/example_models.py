@@ -3,7 +3,8 @@ from typing import List, Tuple
 import numpy as np
 
 from featherstone_py.joint import RevoluteJoint, JointAxis
-from featherstone_py.spatial import colvec, T, I_from_rotational_inertia, rotational_inertia, centroidal_inertia, Ad
+from featherstone_py.spatial import colvec, T, I_from_rotational_inertia, rotational_inertia, centroidal_inertia, Ad, \
+    Tinv
 
 from featherstone_py.model import MultibodyModel
 
@@ -85,8 +86,7 @@ class DoublePendulum:
 
     def to_featherstone_notation(self) -> MultibodyModel:
         """
-        :returns: the multibody model in the Featherstone's book notation.
-        """
+        :returns: the multibody model in the Featherstone's book notation.        """
         l0, l1, l2 = self.l0, self.l1, self.l2
 
         n_bodies = 2
@@ -96,7 +96,7 @@ class DoublePendulum:
 
         X_tree = [
             Ad(T(R=np.eye(3), p=-colvec([0, 0, l0]))),
-            Ad(T(R=np.eye(3), p=-colvec([0, 0, l1])))
+            Ad(T(R=np.eye(3), p=-colvec([0, 0, l1]))),
         ]
 
         m, r, w, h = self.m, self.r, self.w, self.h
@@ -116,4 +116,12 @@ class DoublePendulum:
             )
         ]
 
-        return MultibodyModel(n_bodies, joints, parent, X_tree, I)
+        T_tree = [
+            T(R=np.eye(3), p=colvec([0, 0, l0])),
+            T(R=np.eye(3), p=colvec([0, 0, l1])),
+            T(R=np.eye(3), p=colvec([0, 0, l2]))
+        ]
+
+        T_ee = T(R=np.eye(3), p=colvec([0, 0, l2]))
+
+        return MultibodyModel(n_bodies, joints, parent, X_tree, I, T_ee)
