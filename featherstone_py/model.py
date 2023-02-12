@@ -1,13 +1,13 @@
 import numpy as np
 
-from featherstone_py.joint import JointMetadata, RevoluteJoint, JointAxis
+from featherstone_py.joint import JointMetadata
 from typing import NamedTuple, List, Optional
 
 
 class MultibodyModel(NamedTuple):
     """
     Multibody model description in Featherstone's notation.
-    
+
     Attributes
     ----------
     n_bodies : int
@@ -24,7 +24,8 @@ class MultibodyModel(NamedTuple):
     T_n_ee: Optional[np.ndarray]
         T_n_ee is a homogenous transform from the last body frame to the end-effector frame.
         It is required to consider the ee force exerted on the environment expressed in ee frame (Modern Robotics's Ftip) .
-    """  # noqa: D301
+    """  # noqa: D301, E501
+
     n_bodies: int
     joints: List[JointMetadata]
     parent: List[int]

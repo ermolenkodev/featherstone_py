@@ -114,10 +114,7 @@ def T(R: np.ndarray, p: np.ndarray) -> np.ndarray:
     :param R: SO(3) rotation matrix.
     :param p: 3d displacement vector.
     :return: Homogeneous transformation matrix.
-    """
-    assert R.shape == (3, 3)
-    assert p.shape == (3, 1)
-
+    """  # noqa: D301, E501
     return np.block([
         [R, p],
         [np.zeros((1, 3)), 1]
@@ -130,8 +127,6 @@ def so3(v: np.ndarray) -> np.ndarray:
     :param v: 3d vector.
     :return: Skew-symmetric matrix.
     """
-    assert v.shape == (3, 1)
-
     return np.array([
         [0, -v[2][0], v[1][0]],
         [v[2][0], 0, -v[0][0]],
@@ -145,8 +140,7 @@ def Rot(omega: np.ndarray, theta: float) -> np.ndarray:
     :param omega: 3d rotation axis.
     :param theta: Rotation angle.
     :return: SO(3) rotation matrix.
-    """
-    assert omega.shape == (3, 1)
+    """  # noqa: D301, E501
     omega_so3 = so3(omega)
     return np.eye(3) + np.sin(theta) * omega_so3 + (1 - np.cos(theta)) * omega_so3 @ omega_so3
 
@@ -180,10 +174,7 @@ def I_from_rotational_inertia(I_CC: np.ndarray, p_AC: np.ndarray, m: float) -> n
     :param p_AC: position of the center of mass relative to the link frame origin.
     :param m: mass of the link.
     :return: Spatial inertia matrix expressed in the link frame.
-    """  # noqa: D301
-    assert I_CC.shape == (3, 3)
-    assert p_AC.shape == (3, 1)
-
+    """  # noqa: D301, E501
     return np.block([
         [I_CC + m * so3(p_AC) @ so3(p_AC).T, m * so3(p_AC)],
         [m * so3(p_AC).T, m * np.eye(3)]
@@ -196,9 +187,7 @@ def centroidal_inertia(rotational_inertia: np.ndarray, m: float) -> np.ndarray:
     :param rotational_inertia: 3d rotational inertia matrix.
     :param m: mass of the link.
     :return: Spatial inertia matrix about CoM expressed in the CoM frame.
-    """  # noqa: D301
-    assert rotational_inertia.shape == (3, 3)
-
+    """  # noqa: D301, E501
     return np.block([
         [rotational_inertia, np.zeros((3, 3))],
         [np.zeros((3, 3)), m * np.eye(3)]
@@ -211,8 +200,6 @@ def Ad(T_AB: np.ndarray) -> np.ndarray:
     :param T_AB: homogeneous transformation matrix from frame A to frame B.
     :return: Corresponding adjoint transformation matrix.
     """
-    assert T_AB.shape == (4, 4)
-
     R = T_AB[0:3, 0:3]
     p = T_AB[0:3, 3].reshape(3, 1)
 
@@ -228,8 +215,6 @@ def Tinv(T: np.ndarray) -> np.ndarray:
     :param T: homogeneous transformation matrix.
     :return: inverse of T.
     """
-    assert T.shape == (4, 4)
-
     R = T[0:3, 0:3]
     p = T[0:3, 3].reshape(3, 1)
 
@@ -272,7 +257,7 @@ def se3(V: np.ndarray) -> np.ndarray:
     Converts a twist to a corresponding matrix representation. Analogues to skew-symmetric representation for angular velocity vectors.
     :param V: twist
     :return: Matrix representation of twist.
-    """
+    """  # noqa: D301, E501
     return np.r_[
         np.c_[so3(colvec([V[0], V[1], V[2]])), [V[3], V[4], V[5]]],
         np.zeros((1, 4))

@@ -17,11 +17,18 @@ class InertiaMatrixMethod(ABC):
     Methods
     ----------
     __call__(model, q, qd, tau, f_ext, gravity) -> qdd
-    """
+    """  # noqa: D301, E501
+
     @abstractmethod
-    def __call__(self, model: MultibodyModel, q: np.ndarray, qd: np.ndarray, tau: np.ndarray,
-                 f_ext: Optional[np.ndarray] = None,
-                 gravity: Union[np.ndarray, List[float]] = np.array([0, 0, -9.81])) -> np.ndarray:
+    def __call__(
+        self,
+        model: MultibodyModel,
+        q: np.ndarray,
+        qd: np.ndarray,
+        tau: np.ndarray,
+        f_ext: Optional[np.ndarray] = None,
+        gravity: Union[np.ndarray, List[float]] = np.array([0, 0, -9.81]),
+    ) -> np.ndarray:
         """
         Calculate the joint accelerations of the multibody system, given the systems model and the current state.
         :param model: Multibody system model in Featherstone's notation.
@@ -31,7 +38,7 @@ class InertiaMatrixMethod(ABC):
         :param f_ext: External forces acting on the links.
         :param gravity: Gravity vector.
         :return: Joint accelerations vector.
-        """
+        """  # noqa: D301, E501
         pass
 
 
@@ -39,23 +46,34 @@ class InverseDynamicsUsingRNEA(InertiaMatrixMethod):
     """
     Implementation of the forward dynamics algorithm based on the recursive Newton-Euler algorithm
     for calculating the mass matrix. It is the straightforward but inefficient implementation of the forward dynamics.
-    """
-    def __call__(self, model: MultibodyModel, q: np.ndarray, qd: np.ndarray, tau: np.ndarray,
-                 f_ext: Optional[np.ndarray] = None,
-                 gravity: Union[np.ndarray, List[float]] = np.array([0, 0, -9.81])) -> np.ndarray:
+    """  # noqa: D301, E501
+
+    def __call__(
+        self,
+        model: MultibodyModel,
+        q: np.ndarray,
+        qd: np.ndarray,
+        tau: np.ndarray,
+        f_ext: Optional[np.ndarray] = None,
+        gravity: Union[np.ndarray, List[float]] = np.array([0, 0, -9.81]),
+    ) -> np.ndarray:
         """
         Calculate the joint accelerations of the multibody system using the recursive Newton-Euler algorithm for
         calculating the bias forces vector and the mass matrix.
-        """
+        """  # noqa: D301, E501
         C = calculate_bias_forces(model, q, qd, gravity, f_ext)
         M = calculate_mass_matrix_using_rnea(model, q)
 
         return np.linalg.inv(M) @ (colvec(tau) - C)
 
 
-def calculate_bias_forces(model: MultibodyModel, q: np.ndarray, qd: np.ndarray,
-                          gravity: Union[np.ndarray, List[float]] = np.array([0, 0, -9.81]),
-                          f_ext: Optional[np.ndarray] = None) -> np.ndarray:
+def calculate_bias_forces(
+    model: MultibodyModel,
+    q: np.ndarray,
+    qd: np.ndarray,
+    gravity: Union[np.ndarray, List[float]] = np.array([0, 0, -9.81]),
+    f_ext: Optional[np.ndarray] = None,
+) -> np.ndarray:
     """
     Calculate the bias forces vector using the recursive Newton-Euler algorithm.\f
     Conceptually this method is equivalent to substituting of zero joint accelerations
@@ -69,12 +87,14 @@ def calculate_bias_forces(model: MultibodyModel, q: np.ndarray, qd: np.ndarray,
     :param f_ext: External forces acting on the links.
     :param gravity: Gravity vector.
     :return: Vector of bias forces.
-    """
+    """  # noqa: D301, E501
     qdd = np.zeros_like(q)
     return rnea(model, q, qd, qdd, gravity, f_ext)
 
 
-def calculate_mass_matrix_using_rnea(model: MultibodyModel, q: np.ndarray) -> np.ndarray:
+def calculate_mass_matrix_using_rnea(
+    model: MultibodyModel, q: np.ndarray
+) -> np.ndarray:
     """
     Calculate the mass matrix using the recursive Newton-Euler algorithm.\f
     Zeroing joint velocities, gravity and external forces we are effectively zeroing the bias forces vector
@@ -85,12 +105,12 @@ def calculate_mass_matrix_using_rnea(model: MultibodyModel, q: np.ndarray) -> np
     :param model: Multibody system model in Featherstone's notation.
     :param q: Joint positions vector.
     :return: Mass matrix.
-    """
+    """  # noqa: D301, E501
     n_bodies = model.n_bodies
     M = np.zeros([n_bodies, n_bodies])
 
     qd = np.zeros_like(q)
-    g = [0., 0., 0.]
+    g = [0.0, 0.0, 0.0]
     identity = np.eye(n_bodies)
     for i in range(n_bodies):
         qdd = identity[:, i]

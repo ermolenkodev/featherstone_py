@@ -2,7 +2,10 @@ from typing import Optional, Dict, List, Union, NamedTuple
 
 import numpy as np
 
-from featherstone_py.external_forces import apply_external_forces, apply_end_effector_exerted_force
+from featherstone_py.external_forces import (
+    apply_external_forces,
+    apply_end_effector_exerted_force,
+)
 from featherstone_py.model import MultibodyModel
 from featherstone_py.spatial import Vx, Vx_star, colvec
 
@@ -23,7 +26,8 @@ class CalculatedDynamicsQuantities(NamedTuple):
         Screw axis of each joint expressed in that joint frame.
     Xup : Dict[int, np.ndarray]
         Spatial transformation from i-th body frame to i+1-th body frame.
-    """
+    """  # noqa: D301, E501
+
     V: Dict[int, np.ndarray]
     A: Dict[int, np.ndarray]
     F: Dict[int, np.ndarray]
@@ -32,10 +36,15 @@ class CalculatedDynamicsQuantities(NamedTuple):
     tau: np.ndarray
 
 
-def rnea(model: MultibodyModel, q: np.ndarray, qd: np.ndarray, qdd: np.ndarray,
-         gravity: Union[np.ndarray, List[float]] = np.array([0, 0, -9.81]),
-         f_tip: Optional[np.ndarray] = None,
-         f_ext: Optional[Dict[int, np.ndarray]] = None) -> np.ndarray:
+def rnea(
+    model: MultibodyModel,
+    q: np.ndarray,
+    qd: np.ndarray,
+    qdd: np.ndarray,
+    gravity: Union[np.ndarray, List[float]] = np.array([0, 0, -9.81]),
+    f_tip: Optional[np.ndarray] = None,
+    f_ext: Optional[Dict[int, np.ndarray]] = None,
+) -> np.ndarray:
     """
     Calculate the torque vector needed to achieve the desired joint accelerations using the recursive Newton-Euler.\f
     Optionally the external forces acting on the links or the end-effector exerted force can be specified.
@@ -48,14 +57,19 @@ def rnea(model: MultibodyModel, q: np.ndarray, qd: np.ndarray, qdd: np.ndarray,
         Note that end-effector frame may not be identical to the last link frame. The homogenous transformation matrix T_n_ee from the last link frame to the end-effector frame should be specified in the model.
     :param f_ext: External forces acting on the links expressed in the base frame. The dictionary keys are the link indices.
     :return: Torque vector.
-    """  # noqa: D301
+    """  # noqa: D301, E501
     return rnea_impl(model, q, qd, qdd, gravity, f_tip, f_ext).tau
 
 
-def rnea_impl(model: MultibodyModel, q: np.ndarray, qd: np.ndarray, qdd: np.ndarray,
-              gravity: Union[np.ndarray, List[float]] = np.array([0, 0, -9.81]),
-              f_tip: Optional[np.ndarray] = None,
-              f_ext: Optional[Dict[int, np.ndarray]] = None) -> CalculatedDynamicsQuantities:
+def rnea_impl(
+    model: MultibodyModel,
+    q: np.ndarray,
+    qd: np.ndarray,
+    qdd: np.ndarray,
+    gravity: Union[np.ndarray, List[float]] = np.array([0, 0, -9.81]),
+    f_tip: Optional[np.ndarray] = None,
+    f_ext: Optional[Dict[int, np.ndarray]] = None,
+) -> CalculatedDynamicsQuantities:
     """
     It is actual implementation of the rnea function. It returns not only the torque vector but also the intermediate
     quantities that can be used for other purposes. For example the links twists or wrenches can be transformed to the
@@ -69,7 +83,7 @@ def rnea_impl(model: MultibodyModel, q: np.ndarray, qd: np.ndarray, qdd: np.ndar
         Note that end-effector frame may not be identical to the last link frame. The homogenous transformation matrix T_n_ee from the last link frame to the end-effector frame should be specified in the model.
     :param f_ext: External forces acting on the links expressed in the base frame. The dictionary keys are the link indices.
     :return: CalculatedDynamicsQuantities tuple containing the torque vector and intermediate quantities such as links twists, spatial accelerations, spatial wrenches, spatial transformations from i-th body frame to i+1-th body frame and screw axes of joints.
-    """  # noqa: D301
+    """  # noqa: D301, E501
     n_bodies, joints, parent, X_tree, I, _ = model
 
     # velocity of the base is zero
@@ -77,10 +91,7 @@ def rnea_impl(model: MultibodyModel, q: np.ndarray, qd: np.ndarray, qdd: np.ndar
 
     # Note: we are assign acceleration of the base to the -gravity,
     # but it is just a way to incorporate gravity term to the recursive force propagation formula
-    spatial_gravity = np.block([
-        [np.zeros((3, 1))],
-        [colvec(gravity)]
-    ])
+    spatial_gravity = np.block([[np.zeros((3, 1))], [colvec(gravity)]])
     A = {-1: -spatial_gravity}
 
     F = {-1: np.zeros((6, 1))}
@@ -102,8 +113,8 @@ def rnea_impl(model: MultibodyModel, q: np.ndarray, qd: np.ndarray, qdd: np.ndar
     F = apply_external_forces(f_ext, model, F, Xup)
 
     tau = np.zeros([n_bodies, 1])
-    for i in range(n_bodies-1, -1, -1):
+    for i in range(n_bodies - 1, -1, -1):
         tau[i, 0] = S[i].T @ F[i]
-        F[parent[i]] += Xup[i].T  @ F[i]
+        F[parent[i]] += Xup[i].T @ F[i]
 
     return CalculatedDynamicsQuantities(V, A, F, Xup, S, tau)

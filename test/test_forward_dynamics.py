@@ -8,8 +8,10 @@ from featherstone_py.forward_dynamics import InverseDynamicsUsingRNEA
 
 @pytest.mark.parametrize(
     "q,qd,g,tau,Ftip",
-    [([0.2, 0.2], [0., 0.], [0, 0, -9.81], [0., 0.], np.zeros(6)),
-     ([1, 0.2], [0., 0.2], [0, 0, -9.8], [0., 0.], np.zeros(6))]
+    [
+        ([0.2, 0.2], [0.0, 0.0], [0, 0, -9.81], [0.0, 0.0], np.zeros(6)),
+        ([1, 0.2], [0.0, 0.2], [0, 0, -9.8], [0.0, 0.0], np.zeros(6)),
+    ],
 )
 def test_forward_dynamics(double_pendulum_models, q, qd, g, tau, Ftip):
     q, qd = np.array(q), np.array(qd)
