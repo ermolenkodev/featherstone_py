@@ -43,6 +43,8 @@ class DoublePendulum:
     def __init__(self, l0=0.5, l1=0.7, l2=0.4, m=1., r=0.05, w=0.08, h=0.06):
         self.l0, self.l1, self.l2 = l0, l1, l2
         self.m, self.r, self.w, self.h = m, r, w, h
+        self.link1_central_inertia = [m * (w ** 2 + l1 ** 2) / 12, m * (h ** 2 + l1 ** 2) / 12, m * (h ** 2 + w ** 2) / 12]
+        self.link2_central_inertia = [m * (w ** 2 + l2 ** 2) / 12, m * (h ** 2 + l2 ** 2) / 12, m * (h ** 2 + w ** 2) / 12]
 
     def to_modern_robotics_notation(self) -> Tuple[np.ndarray, np.ndarray, List[np.ndarray], np.ndarray]:
         """
@@ -71,13 +73,11 @@ class DoublePendulum:
         m, r, w, h = self.m, self.r, self.w, self.h
         Glist = np.array([
             centroidal_inertia(
-                rotational_inertia(
-                    [m * (w ** 2 + l1 ** 2) / 12, m * (h ** 2 + l1 ** 2) / 12, m * (h ** 2 + w ** 2) / 12]),
+                rotational_inertia(self.link1_central_inertia),
                 m
             ),
             centroidal_inertia(
-                rotational_inertia(
-                    [m * (w ** 2 + l2 ** 2) / 12, m * (h ** 2 + l2 ** 2) / 12, m * (h ** 2 + w ** 2) / 12]),
+                rotational_inertia(self.link2_central_inertia),
                 m
             )
         ])
@@ -103,14 +103,12 @@ class DoublePendulum:
 
         I = [
             I_from_rotational_inertia(
-                rotational_inertia(
-                    [m * (w ** 2 + l1 ** 2) / 12, m * (h ** 2 + l1 ** 2) / 12, m * (h ** 2 + w ** 2) / 12]),
+                rotational_inertia(self.link1_central_inertia),
                 colvec([0, 0, l1 / 2]),
                 m
             ),
             I_from_rotational_inertia(
-                rotational_inertia(
-                    [m * (w ** 2 + l2 ** 2) / 12, m * (h ** 2 + l2 ** 2) / 12, m * (h ** 2 + w ** 2) / 12]),
+                rotational_inertia(self.link2_central_inertia),
                 colvec([0, 0, l2 / 2]),
                 m
             )

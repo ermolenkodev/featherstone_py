@@ -24,6 +24,14 @@ pip install -r test/requirements.txt
 python -m pytest test
 ```
 
+### Prepare environment for example notebooks
+*NOTE: Only tested on Ubuntu*
+```bash
+pip install -r examples/requirements.txt
+```
+
+Install drake from apt using [official instructions](https://drake.mit.edu/apt.html#stable-releases)
+
 ### Note about the License
 This project closely follows the API and notation used in spatial v2, and as a result,
 it is considered a derivative work of this library and is licensed with GPL v3.
