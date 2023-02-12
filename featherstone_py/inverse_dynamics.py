@@ -2,7 +2,7 @@ from typing import Optional, Dict, List, Union, NamedTuple
 
 import numpy as np
 
-from external_forces import apply_external_forces, apply_end_effector_exerted_force
+from featherstone_py.external_forces import apply_external_forces, apply_end_effector_exerted_force
 from featherstone_py.model import MultibodyModel
 from featherstone_py.spatial import Vx, Vx_star, colvec
 

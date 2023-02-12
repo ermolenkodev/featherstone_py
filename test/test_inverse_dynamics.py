@@ -2,7 +2,7 @@ import pytest
 
 import numpy as np
 
-from example_models import DoublePendulum
+from featherstone_py.example_models import DoublePendulum
 from featherstone_py.inverse_dynamics import rnea, rnea_impl
 from modern_robotics import InverseDynamics, Adjoint, TransInv, MatrixExp6, VecTose3, ad
 from featherstone_py.spatial import Ad, colvec, T, Tinv

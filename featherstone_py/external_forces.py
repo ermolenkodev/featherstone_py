@@ -1,13 +1,11 @@
-from typing import Dict, Union, Optional
+from typing import Dict, Optional
 
 import numpy as np
 
-from model import MultibodyModel
+from featherstone_py.model import MultibodyModel
 
-from functools import singledispatch
-
-from spatial import colvec, Tinv, Ad, T
-from utils import take_last
+from featherstone_py.spatial import colvec, Tinv, Ad, T
+from featherstone_py.utils import take_last
 
 
 def apply_external_forces(f_ext: Optional[Dict[int, np.ndarray]],
