@@ -48,6 +48,7 @@ class DoublePendulum:
 
     def __init__(self, l0=0.5, l1=0.7, l2=0.4, m=1.0, r=0.05, w=0.08, h=0.06):
         self.l0, self.l1, self.l2 = l0, l1, l2
+        self.r, self.w, self.h = r, w, h
         self.m = m
         self.link1_central_inertia = [
             m * (w ** 2 + l1 ** 2) / 12,
